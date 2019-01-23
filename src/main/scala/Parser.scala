@@ -91,6 +91,26 @@ class Alternates( rs: List[Rule] ) extends Rule {
 
 }
 
+class Sequence( rs: List[Rule], action: Vector[Rule] => AST ) extends Rule {
+
+  val len = rs.length
+
+  def apply( t: Stream[Token] ): Result = {
+    def rules( l: List[Rule] ): Result =
+      l match {
+        case List( r ) => r( t )
+        case hd :: tl =>
+          hd( t ) match {
+            case f: Failure => f
+            case s: Success => rules( tl )
+          }
+      }
+
+    rules( rs )
+  }
+
+}
+
 class LeftAssocBinary( expr: Rule, ops: Set[String] ) extends Rule {
 
   def apply( t: Stream[Token] ) = {
@@ -116,18 +136,38 @@ class LeftAssocBinary( expr: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-object IntegerRule extends Rule {
+class TokenClassRule( tok: Class[_], action: (Reader, String) => AST, error: String ) extends Rule {
 
   def apply( t: Stream[Token] ) =
-    t.head match {
-      case IntegerToken( pos, value ) => Success( t.tail, IntegerAST(pos, value.toInt) )
-      case _ => Failure( "expected integer", t )
-    }
+    if (t.head.getClass == tok)
+      Success( t.tail, action(t.head.pos, t.head.value.toInt) )
+    else
+      Failure( error, t )
+
 }
+
+class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => AST, error: String ) extends Rule {
+
+  def apply( t: Stream[Token] ) =
+    if (t.head.getClass == tok && t.head.value == value)
+      Success( t.tail, action(t.head.pos, t.head.value.toInt) )
+    else
+      Failure( error, t )
+
+}
+
+object IntegerRule extends TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
+
+object LeftParenRule extends TokenMatchRule( classOf[SymbolToken], "(", (_, _) => null, "expected '('" )
+
+object RightParenRule extends TokenMatchRule( classOf[SymbolToken], ")", (_, _) => null, "expected ')'" )
 
 object Rules {
 
   val primary =
-    new Alternates()
+    new Alternates( List(
+      IntegerRule,
+      new Sequence( LeftParenRule, )
+    ) )
 
 }
