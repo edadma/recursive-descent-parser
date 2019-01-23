@@ -93,20 +93,29 @@ class Alternates( rs: List[Rule] ) extends Rule {
 
 class LeftAssocBinary( expr: Rule, ops: Set[String] ) extends Rule {
 
-  def apply( t: Stream[Token] ): Result = {
-    var res: AST = null
+  def apply( t: Stream[Token] ) = {
 
-    def parse_expr( rest: Stream[Token], ast: AST ) =
-      expr( t ) match {
-        case f: Failure => f
-        case s: Success =>
-          val tok = rest.head
+    def parse_expr( suc: Success ): Result = {
+      val tok = suc.rest.head
 
-          if (ops contains tok.value) {
+      if (ops contains tok.value)
+        expr( suc.rest.tail ) match {
+          case _: Failure => suc
+          case Success( rest1, right ) => parse_expr( Success(rest1, BinaryAST(suc.result, tok.pos, tok.value, right)) )
+        }
+      else
+        suc
+    }
 
-          } else
-            s
-      }
+    expr( t ) match {
+      case f: Failure => f
+      case s: Success =>
+        val tok = rest.head
+
+        if (ops contains tok.value) {
+
+        } else
+          s
 
     parse_expr( t, null )
   }
