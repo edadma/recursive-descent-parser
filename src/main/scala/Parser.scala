@@ -65,7 +65,7 @@ class Parser {
 
   abstract class Rule {
 
-  def apply( t: Stream[Token] ): Result
+    def apply( t: Stream[Token] ): Result
 
   }
 
