@@ -55,7 +55,7 @@ libraryDependencies ++= {
 //}
 
 libraryDependencies ++= Seq(
-  "xyz.hyperreal" %% "pattern-matcher" % "0.2.13"
+  "xyz.hyperreal" %% "pattern-matcher" % "0.2.14"
 )
 
 coverageExcludedPackages := ".*Main"
