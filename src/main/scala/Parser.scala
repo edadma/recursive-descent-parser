@@ -41,10 +41,10 @@ class Parser {
     override val lineComment = '%'
 
     def token =
+      pos <~ eoi ^^ EOIToken |
       pos ~ ident ^^ { case p ~ n => IdentToken( p, n ) } |
       pos ~ delimiter ^^ { case p ~ d => SymbolToken( p, d ) } |
       pos ~ t(digits) ^^ { case p ~ n => IntegerToken( p, n ) } |
-      pos <~ Reader.EOI ^^ EOIToken |
       pos ~ char ^^ { case p ~ c => ErrorToken( p, c.toString ) }
 
   }
