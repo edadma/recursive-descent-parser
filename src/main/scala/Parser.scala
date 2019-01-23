@@ -109,15 +109,9 @@ class LeftAssocBinary( expr: Rule, ops: Set[String] ) extends Rule {
 
     expr( t ) match {
       case f: Failure => f
-      case s: Success =>
-        val tok = rest.head
+      case s: Success => parse_expr( s )
+    }
 
-        if (ops contains tok.value) {
-
-        } else
-          s
-
-    parse_expr( t, null )
   }
 
 }
@@ -129,4 +123,11 @@ object IntegerRule extends Rule {
       case IntegerToken( pos, value ) => Success( t.tail, IntegerAST(pos, value.toInt) )
       case _ => Failure( "expected integer", t )
     }
+}
+
+object Rules {
+
+  val primary =
+    new Alternates()
+
 }
