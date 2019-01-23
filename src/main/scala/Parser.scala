@@ -49,6 +49,11 @@ class Parser {
 
   }
 
+  trait Result
+
+  case class Failure( msg: String, rest: Stream[Token] ) extends Result
+  case class Success( rest: Stream[Token], result: AST ) extends Result
+
   def tokenStream( r: Reader ): Stream[Token] = {
     Lexer.token( r ) match {
       case m: Lexer.Mismatch => m.error
@@ -82,6 +87,15 @@ class Parser {
       alternates( rs )
     }
 
+  }
+
+  object IntegerRule extends Rule {
+
+    def apply( t: Stream[Token] ) =
+      t.head match {
+        case IntegerToken( pos, value ) => Success( t.tail, IntegerAST(pos, value.toInt) )
+        case _ => Failure( "expected integer", t )
+      }
   }
 
 //class LeftAssocBinary( p: Parser, ops: Set[String] ) extends Parser {
