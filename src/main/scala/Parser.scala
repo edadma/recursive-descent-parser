@@ -73,6 +73,14 @@ abstract class Rule {
 
 }
 
+class LazyRule( r: => Rule ) extends Rule {
+
+  lazy val r1 = r
+
+  def apply( t: Stream[Token] ) = r1( t )
+
+}
+
 class Alternates( rs: List[Rule] ) extends Rule {
 
   require( rs nonEmpty, "there must be at least one alternate" )
@@ -100,15 +108,9 @@ class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
   def apply( t: Stream[Token] ): Result = {
     val results = new ArrayBuffer[AST]
 
-    def rules( l: List[Rule], t1: Stream[Token] ) =
+    def rules( l: List[Rule], t1: Stream[Token] ): Result =
       l match {
-        case List( r ) =>
-          r( t1 ) match {
-            case f: Failure => f
-            case Success( rest, result ) =>
-              results += result
-              Success( rest, action(results.toVector) )
-          }
+        case Nil => Success( t1, action(results.toVector) )
         case hd :: tl =>
           hd( t1 ) match {
             case f: Failure => f
