@@ -2,6 +2,8 @@ package xyz.hyperreal.recursive_descent_parser
 
 import xyz.hyperreal.pattern_matcher.{Matchers, Reader}
 
+import scala.collection.mutable.ArrayBuffer
+
 
 abstract class Token {
   val pos: Reader
@@ -19,7 +21,7 @@ trait Result
 case class Failure( msg: String, rest: Stream[Token] ) extends Result
 case class Success( rest: Stream[Token], result: AST ) extends Result
 
-class Parser {
+class Parser( grammar: Rule ) {
 
   object Lexer extends Matchers[Reader] {
 
@@ -61,7 +63,7 @@ class Parser {
     }
   }
 
-  def apply( r: Reader, rule: Rule ) = rule( tokenStream(r) )
+  def apply( r: Reader ) = grammar( tokenStream(r) )
 
 }
 
@@ -91,22 +93,32 @@ class Alternates( rs: List[Rule] ) extends Rule {
 
 }
 
-class Sequence( rs: List[Rule], action: Vector[Rule] => AST ) extends Rule {
+class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
   val len = rs.length
 
   def apply( t: Stream[Token] ): Result = {
-    def rules( l: List[Rule] ): Result =
+    val results = new ArrayBuffer[AST]
+
+    def rules( l: List[Rule], t1: Stream[Token] ) =
       l match {
-        case List( r ) => r( t )
-        case hd :: tl =>
-          hd( t ) match {
+        case List( r ) =>
+          r( t1 ) match {
             case f: Failure => f
-            case s: Success => rules( tl )
+            case Success( rest, result ) =>
+              results += result
+              Success( rest, action(results.toVector) )
+          }
+        case hd :: tl =>
+          hd( t1 ) match {
+            case f: Failure => f
+            case Success( rest, result ) =>
+              results += result
+              rules( tl, rest )
           }
       }
 
-    rules( rs )
+    rules( rs, t )
   }
 
 }
@@ -140,7 +152,7 @@ class TokenClassRule( tok: Class[_], action: (Reader, String) => AST, error: Str
 
   def apply( t: Stream[Token] ) =
     if (t.head.getClass == tok)
-      Success( t.tail, action(t.head.pos, t.head.value.toInt) )
+      Success( t.tail, action(t.head.pos, t.head.value) )
     else
       Failure( error, t )
 
@@ -150,7 +162,7 @@ class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => 
 
   def apply( t: Stream[Token] ) =
     if (t.head.getClass == tok && t.head.value == value)
-      Success( t.tail, action(t.head.pos, t.head.value.toInt) )
+      Success( t.tail, action(t.head.pos, t.head.value) )
     else
       Failure( error, t )
 
@@ -161,13 +173,3 @@ object IntegerRule extends TokenClassRule( classOf[IntegerToken], (r, s) => Inte
 object LeftParenRule extends TokenMatchRule( classOf[SymbolToken], "(", (_, _) => null, "expected '('" )
 
 object RightParenRule extends TokenMatchRule( classOf[SymbolToken], ")", (_, _) => null, "expected ')'" )
-
-object Rules {
-
-  val primary =
-    new Alternates( List(
-      IntegerRule,
-      new Sequence( LeftParenRule, )
-    ) )
-
-}
