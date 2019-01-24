@@ -71,6 +71,13 @@ abstract class Rule {
 
   def apply( t: Stream[Token] ): Result
 
+  def symbol( t: Stream[Token], syms: Set[String] ) = {
+    t.head match {
+      case SymbolToken( pos, value ) if syms(value) => Success( t.tail, StringAST(pos, value) )
+      case tok => Failure( s"expected one of: $syms", t )
+    }
+  }
+
 }
 
 class LazyRule( r: => Rule ) extends Rule {
@@ -78,6 +85,14 @@ class LazyRule( r: => Rule ) extends Rule {
   lazy val r1 = r
 
   def apply( t: Stream[Token] ) = r1( t )
+
+}
+
+class RuleRef extends Rule {
+
+  var r: Rule = null
+
+  def apply( t: Stream[Token] ) = r( t )
 
 }
 
@@ -125,20 +140,19 @@ class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
 }
 
-class LeftAssocBinary( expr: Rule, ops: Set[String] ) extends Rule {
+class LeftAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
 
   def apply( t: Stream[Token] ) = {
 
     def parse_expr( suc: Success ): Result = {
-      val tok = suc.rest.head
-
-      if (ops contains tok.value)
-        expr( suc.rest.tail ) match {
-          case _: Failure => suc
-          case Success( rest1, right ) => parse_expr( Success(rest1, BinaryAST(suc.result, tok.pos, tok.value, right)) )
-        }
-      else
-        suc
+      symbol( suc.rest, ops ) match {
+        case Success( rest, StringAST(pos, value) ) =>
+          expr( rest ) match {
+            case _: Failure => suc
+            case Success( rest1, right ) => parse_expr( Success(rest1, BinaryAST(suc.result, pos, value, right)) )
+          }
+        case _ => suc
+      }
     }
 
     expr( t ) match {
@@ -149,6 +163,17 @@ class LeftAssocBinary( expr: Rule, ops: Set[String] ) extends Rule {
   }
 
 }
+
+//class RightAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
+//
+//  def apply( t: Stream[Token] ) =
+//    expr( t ) match {
+//      case f: Failure => f
+//      case s@Success( rest, result ) =>
+//
+//    }
+//
+//}
 
 class TokenClassRule( tok: Class[_], action: (Reader, String) => AST, error: String ) extends Rule {
 
