@@ -9,6 +9,8 @@ abstract class AST {
 
 }
 
+case class UnaryAST( pos: Reader, op: String, right: AST ) extends AST
+
 case class BinaryAST( left: AST, pos: Reader, op: String, right: AST ) extends AST
 
 case class IntegerAST( pos: Reader, n: Int ) extends AST

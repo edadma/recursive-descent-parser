@@ -140,14 +140,16 @@ class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
 }
 
-class LeftAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
+class LeftAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+
+  val same1 = if (same eq null) this else same
 
   def apply( t: Stream[Token] ) = {
 
     def parse_expr( suc: Success ): Result = {
       symbol( suc.rest, ops ) match {
         case Success( rest, StringAST(pos, value) ) =>
-          expr( rest ) match {
+          higher( rest ) match {
             case _: Failure => suc
             case Success( rest1, right ) => parse_expr( Success(rest1, BinaryAST(suc.result, pos, value, right)) )
           }
@@ -155,7 +157,7 @@ class LeftAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
       }
     }
 
-    expr( t ) match {
+    higher( t ) match {
       case f: Failure => f
       case s: Success => parse_expr( s )
     }
@@ -164,15 +166,17 @@ class LeftAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-class RightAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
+class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+
+  val same1 = if (same eq null) this else same
 
   def apply( t: Stream[Token] ) =
-    expr( t ) match {
+    higher( t ) match {
       case f: Failure => f
       case suc@Success( rest, result ) =>
         symbol( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
-            apply( rest1 ) match {
+            same1( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
               case _ => suc
             }
@@ -182,20 +186,50 @@ class RightAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-class NonAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
+class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
 
   def apply( t: Stream[Token] ) =
-    expr( t ) match {
+    higher( t ) match {
       case f: Failure => f
       case suc@Success( rest, result ) =>
         symbol( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
-            expr( rest1 ) match {
+            higher( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
               case _ => suc
             }
           case _ => suc
         }
+    }
+
+}
+
+class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+
+  val same1 = if (same eq null) this else same
+
+  def apply( t: Stream[Token] ) =
+    symbol( t, ops ) match {
+      case Success( rest, StringAST(pos, s) ) =>
+        same1( rest ) match {
+          case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
+          case _ => higher( t )
+        }
+      case _ => higher( t )
+    }
+
+}
+
+class NonAssocPrefix( higher: Rule, ops: Set[String] ) extends Rule {
+
+  def apply( t: Stream[Token] ) =
+    symbol( t, ops ) match {
+      case Success( rest, StringAST(pos, s) ) =>
+        higher( rest ) match {
+          case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
+          case _ => higher( t )
+        }
+      case _ => higher( t )
     }
 
 }
