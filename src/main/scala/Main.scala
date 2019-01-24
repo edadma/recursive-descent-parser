@@ -11,13 +11,14 @@ object Main extends App {
       IntegerRule,
       new Sequence( List(LeftParenRule, grammarRef, RightParenRule), vec => vec(1) )
     ) )
-  val multiplicative: Rule = new LeftAssocInfix( primary, Set("*", "/") )
+  val exponential: Rule = new RightAssocInfix( primary, Set("^") )
+  val multiplicative: Rule = new LeftAssocInfix( exponential, Set("*", "/") )
   val additive: Rule = new LeftAssocInfix( multiplicative, Set("+", "-") )
 
   grammarRef.r = additive
 
   val p = new Parser( additive )
-  val input = "3 + 4 * 5"
+  val input = "2 - 3 + 4 * 5 ^ 6 ^ 7"
 
   val ast = p( new StringReader(input) )
 

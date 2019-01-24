@@ -164,16 +164,53 @@ class LeftAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-//class RightAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
-//
-//  def apply( t: Stream[Token] ) =
-//    expr( t ) match {
-//      case f: Failure => f
-//      case s@Success( rest, result ) =>
-//
-//    }
-//
-//}
+class RightAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
+
+  def apply( t: Stream[Token] ) =
+    expr( t ) match {
+      case f: Failure => f
+      case suc@Success( rest, result ) =>
+        symbol( rest, ops ) match {
+          case Success( rest1, StringAST(pos, s) ) =>
+            apply( rest1 ) match {
+              case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
+              case _ => suc
+            }
+          case _ => suc
+        }
+    }
+
+}
+
+class NonAssocInfix( expr: Rule, ops: Set[String] ) extends Rule {
+
+  def apply( t: Stream[Token] ) =
+    expr( t ) match {
+      case f: Failure => f
+      case suc@Success( rest, result ) =>
+        symbol( rest, ops ) match {
+          case Success( rest1, StringAST(pos, s) ) =>
+            expr( rest1 ) match {
+              case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
+              case _ => suc
+            }
+          case _ => suc
+        }
+    }
+
+}
+
+class Succeed( result: AST ) extends Rule {
+
+  def apply( t: Stream[Token] ) = Success( t, result )
+
+}
+
+class Fail( msg: String ) extends Rule {
+
+  def apply( t: Stream[Token] ) = Failure( msg, t )
+
+}
 
 class TokenClassRule( tok: Class[_], action: (Reader, String) => AST, error: String ) extends Rule {
 
