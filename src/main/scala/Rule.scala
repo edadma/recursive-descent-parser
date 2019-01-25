@@ -110,17 +110,17 @@ case class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends
 
   def apply( t: Stream[Token] ) =
     higher( t ) match {
-      case f: Failure => f
       case suc@Success( rest, result ) =>
-        println(ops)
         atom( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
             same1( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
               case _ => suc
             }
-          case _ => suc
+          case _ if same eq null => suc
+          case f => f
         }
+      case f => f
     }
 
 }
@@ -154,7 +154,8 @@ case class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rul
           case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
           case _ => higher( t )
         }
-      case _ => higher( t )
+      case _ if same eq null => higher( t )
+      case f => f
     }
 
 }
