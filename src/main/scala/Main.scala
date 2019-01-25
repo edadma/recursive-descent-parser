@@ -24,7 +24,7 @@ object Main extends App {
 
 //  println( ast )
 
-  val (grammar, ops) = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*"), Op(200, 'xfx, "**")/*, Op(200, 'xfy, "^"), Op(200, 'fx, "-")*/) )
+  val (grammar, ops) = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*"), Op(200, 'xfx, "**"), Op(200, 'xfy, "^")/*, Op(200, 'fx, "-")*/) )
 
   println( grammar )
 

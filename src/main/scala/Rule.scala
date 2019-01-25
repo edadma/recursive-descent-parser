@@ -28,9 +28,9 @@ class LazyRule( r: => Rule ) extends Rule {
 
 class RuleRef extends Rule {
 
-  var r: Rule = null
+  var ref: Rule = null
 
-  def apply( t: Stream[Token] ) = r( t )
+  def apply( t: Stream[Token] ) = ref( t )
 
 }
 
