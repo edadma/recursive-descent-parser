@@ -28,7 +28,7 @@ object Main extends App {
 
   println( grammar )
 
-  val input = "2 - 3 + 4 * 5"
+  val input = "3 ** 5"
   val p = new Parser( grammar, ops )
   val ast = p( new StringReader(input) )
 

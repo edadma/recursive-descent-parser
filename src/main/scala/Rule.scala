@@ -112,6 +112,7 @@ case class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends
     higher( t ) match {
       case f: Failure => f
       case suc@Success( rest, result ) =>
+        println(ops)
         atom( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
             same1( rest1 ) match {

@@ -26,7 +26,7 @@ object Builder {
     }
 
     grammar.ref = higher
-    (higher, ops map (_.operator))
+    (higher, ops.map( _.operator ) ++ List("(", ")"))
   }
 
 }
