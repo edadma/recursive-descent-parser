@@ -11,9 +11,9 @@ object Main extends App {
       IntegerRule,
       new Sequence( List(LeftParenRule, grammarRef, RightParenRule), vec => vec(1) )
     ) )
-  val exponential: Rule = new RightAssocInfix( primary, Set("^") )
-  val multiplicative: Rule = new LeftAssocInfix( exponential, Set("*", "/") )
-  val additive: Rule = new LeftAssocInfix( multiplicative, Set("+", "-") )
+  val exponential: Rule = new RightAssocInfix( primary, null, Set("^") )
+  val multiplicative: Rule = new LeftAssocInfix( exponential, null, Set("*", "/") )
+  val additive: Rule = new LeftAssocInfix( multiplicative, null, Set("+", "-") )
 
   grammarRef.r = additive
 
