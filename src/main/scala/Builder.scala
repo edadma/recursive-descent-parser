@@ -11,12 +11,13 @@ object Builder {
     (ops groupBy (_.priority) toList) sortBy (_._1) map {case (p, os) => (p, os groupBy (_.specifier) toList)} foreach {
       case (_, List(cls)) =>
         cls match {
+          case ('xfx, os) => higher = NonAssocInfix( higher, os map (_.operator) toSet )
           case ('yfx, os) => higher = LeftAssocInfix( higher, null, os map (_.operator) toSet )
         }
     }
 
     grammar.r = higher
-    higher
+    (higher, ops map (_.operator))
   }
 
 }

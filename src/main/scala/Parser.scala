@@ -19,29 +19,11 @@ trait Result
 case class Failure( msg: String, rest: Stream[Token] ) extends Result
 case class Success( rest: Stream[Token], result: AST ) extends Result
 
-class Parser( grammar: Rule ) {
+class Parser( grammar: Rule, delims: List[String] ) {
 
   object Lexer extends Matchers[Reader] {
 
-    delimiters += (
-      ":-", "-->",
-      "?-",
-      ";",
-      "->",
-      ",",
-      "\\+",
-      "=", "\\=",
-      "==", "\\==", "@<", "@=<", "@>", "@>=",
-      "=..",
-      "=",
-      "=:=", "=\\=", "<", "=<", ">", ">=",
-      "+", "-", "/\\", "\\/",
-      "*", "/", "//", "<<", ">>",
-      "**",
-      "^",
-      "\\",
-      ".", "[", "|", "]", "(", ")", "!"
-    )
+    delimiters ++= delims
 
     override val lineComment = '%'
 

@@ -24,12 +24,12 @@ object Main extends App {
 
 //  println( ast )
 
-  val grammar = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*")/*, Op(200, 'xfx, "**"), Op(200, 'xfy, "^"), Op(200, 'fx, "-")*/) )
+  val (grammar, ops) = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*"), Op(200, 'xfx, "**")/*, Op(200, 'xfy, "^"), Op(200, 'fx, "-")*/) )
 
   println( grammar )
 
   val input = "2 - 3 + 4 * 5"
-  val p = new Parser( grammar )
+  val p = new Parser( grammar, ops )
   val ast = p( new StringReader(input) )
 
   println( ast )
