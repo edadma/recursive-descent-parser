@@ -34,7 +34,7 @@ class RuleRef extends Rule {
 
 }
 
-class Alternates( rs: List[Rule] ) extends Rule {
+case class Alternates( rs: List[Rule] ) extends Rule {
 
   require( rs nonEmpty, "there must be at least one alternate" )
 
@@ -54,7 +54,7 @@ class Alternates( rs: List[Rule] ) extends Rule {
 
 }
 
-class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
+case class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
   val len = rs.length
 
@@ -78,7 +78,7 @@ class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
 }
 
-class LeftAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+case class LeftAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
 
   val same1 = if (same eq null) this else same
 
@@ -104,7 +104,7 @@ class LeftAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule 
 
 }
 
-class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+case class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
 
   val same1 = if (same eq null) this else same
 
@@ -124,7 +124,7 @@ class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule
 
 }
 
-class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
+case class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
 
   def apply( t: Stream[Token] ) =
     higher( t ) match {
@@ -142,7 +142,7 @@ class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+case class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
 
   val same1 = if (same eq null) this else same
 
@@ -158,7 +158,7 @@ class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-class NonAssocPrefix( higher: Rule, ops: Set[String] ) extends Rule {
+case class NonAssocPrefix( higher: Rule, ops: Set[String] ) extends Rule {
 
   def apply( t: Stream[Token] ) =
     atom( t, ops ) match {
@@ -172,13 +172,13 @@ class NonAssocPrefix( higher: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-class Succeed( result: AST ) extends Rule {
+case class Succeed( result: AST ) extends Rule {
 
   def apply( t: Stream[Token] ) = Success( t, result )
 
 }
 
-class Fail( msg: String ) extends Rule {
+case class Fail( msg: String ) extends Rule {
 
   def apply( t: Stream[Token] ) = Failure( msg, t )
 
@@ -204,8 +204,8 @@ class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => 
 
 }
 
-object IntegerRule extends TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
+case object IntegerRule extends TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
 
-object LeftParenRule extends TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
+case object LeftParenRule extends TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
 
-object RightParenRule extends TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )
+case object RightParenRule extends TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )

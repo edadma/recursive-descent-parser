@@ -7,19 +7,29 @@ object Main extends App {
 
   val grammarRef = new RuleRef
   val primary =
-    new Alternates( List(
+    Alternates( List(
       IntegerRule,
-      new Sequence( List(LeftParenRule, grammarRef, RightParenRule), vec => vec(1) )
+      Sequence( List(LeftParenRule, grammarRef, RightParenRule), vec => vec(1) )
     ) )
-  val exponential: Rule = new RightAssocInfix( primary, null, Set("^") )
-  val multiplicative: Rule = new LeftAssocInfix( exponential, null, Set("*", "/") )
-  val additive: Rule = new LeftAssocInfix( multiplicative, null, Set("+", "-") )
+//  val exponential: Rule = RightAssocInfix( primary, null, Set("^") )
+//  val multiplicative: Rule = LeftAssocInfix( exponential, null, Set("*", "/") )
+//  val additive: Rule = LeftAssocInfix( multiplicative, null, Set("+", "-") )
+//
+//  grammarRef.r = additive
+//
+//  val p = new Parser( additive )
+//  val input = "2 - 3 + 4 * 5 ^ 6 ^ 7"
+//
+//  val ast = p( new StringReader(input) )
 
-  grammarRef.r = additive
+//  println( ast )
 
-  val p = new Parser( additive )
-  val input = "2 - 3 + 4 * 5 ^ 6 ^ 7"
+  val grammar = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*")/*, Op(200, 'xfx, "**"), Op(200, 'xfy, "^"), Op(200, 'fx, "-")*/) )
 
+  println( grammar )
+
+  val input = "2 - 3 + 4 * 5"
+  val p = new Parser( grammar )
   val ast = p( new StringReader(input) )
 
   println( ast )
