@@ -1,7 +1,6 @@
 package xyz.hyperreal.recursive_descent_parser
 
-import scala.collection.mutable.ArrayBuffer
-
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import xyz.hyperreal.pattern_matcher.Reader
 
 
@@ -75,6 +74,20 @@ case class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
     rules( rs, t )
   }
+
+}
+
+case class ZeroOrMore( repeated: Rule ) extends Rule {
+
+  def apply( t: Stream[Token] ) = rep( t )
+
+  def rep( t: Stream[Token], buf: ListBuffer[AST] = new ListBuffer ): Result =
+    repeated( t ) match {
+      case Success( rest, result ) =>
+        buf += result
+        rep( rest, buf )
+      case _ => Success( t, ListAST(null, buf.toList) )
+    }
 
 }
 
@@ -207,6 +220,12 @@ class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => 
 }
 
 object Rule {
+
+  def oneOrMoreSeparated( repeated: Rule, separator: Rule ) =
+    Sequence( List(
+      repeated, ZeroOrMore(Sequence( List(
+        separator, repeated), _(1))
+      )), v => ListAST(null, v(0) +: v(1).asInstanceOf[ListAST].list) )
 
   val integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
 

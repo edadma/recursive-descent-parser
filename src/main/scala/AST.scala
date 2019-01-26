@@ -18,3 +18,5 @@ case class IntegerAST( pos: Reader, n: Int ) extends AST
 case class StringAST( pos: Reader, s: String ) extends AST
 
 case class AtomAST( pos: Reader, atom: String ) extends AST
+
+case class ListAST( pos: Reader, list: List[AST] ) extends AST
