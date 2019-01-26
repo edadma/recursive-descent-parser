@@ -8,6 +8,7 @@ abstract class Token {
   val value: String
 }
 
+case class StringToken( pos: Reader, value: String ) extends Token
 case class AtomToken( pos: Reader, value: String ) extends Token
 case class QuotedAtomToken( pos: Reader, value: String ) extends Token
 case class IntegerToken( pos: Reader, value: String ) extends Token
@@ -29,6 +30,7 @@ class Parser( grammar: Rule, delims: List[String] ) {
 
     def token =
       pos <~ eoi ^^ EOIToken |
+      pos ~ singleStringLit ^^ { case p ~ n => QuotedAtomToken( p, n ) } |
       pos ~ ident ^^ { case p ~ n => AtomToken( p, n ) } |
       pos ~ delimiter ^^ { case p ~ d => AtomToken( p, d ) } |
       pos ~ t(digits) ^^ { case p ~ n => IntegerToken( p, n ) } |

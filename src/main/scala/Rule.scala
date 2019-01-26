@@ -206,8 +206,21 @@ class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => 
 
 }
 
-case object IntegerRule extends TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
+object Rule {
 
-case object LeftParenRule extends TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
+  def integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
 
-case object RightParenRule extends TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )
+  def string = new TokenClassRule( classOf[StringToken], (r, s) => StringAST(r, s), "expected string" )
+
+  def atom =
+    Alternates(
+      List(
+        new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
+    ) )
+
+  def leftParen = new TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
+
+  def rightParen = new TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )
+
+}

@@ -8,8 +8,10 @@ object Main extends App {
   val grammarRef = new RuleRef
   val primary =
     Alternates( List(
-      IntegerRule,
-      Sequence( List(LeftParenRule, grammarRef, RightParenRule), vec => vec(1) )
+      Rule.integer,
+      Sequence( List(Rule.leftParen, grammarRef, Rule.rightParen), vec => vec(1) ),
+//      Sequence( List(Rule.atom, Rule.leftParen, Rule.rightParen), vec => vec(1) ),
+      Rule.atom
     ) )
 //  val exponential: Rule = RightAssocInfix( primary, null, Set("^") )
 //  val multiplicative: Rule = LeftAssocInfix( exponential, null, Set("*", "/") )
@@ -28,8 +30,8 @@ object Main extends App {
 
   println( grammar )
 
-  val input = "-3 ^ 4"
-  val p = new Parser( grammar, ops )
+  val input = "a + (b + c)"
+  val p = new Parser( grammar, ops ++ List("(", ")") )
   val ast = p( new StringReader(input) )
 
   println( ast )
