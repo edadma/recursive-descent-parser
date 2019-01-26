@@ -2,6 +2,8 @@ package xyz.hyperreal.recursive_descent_parser
 
 import xyz.hyperreal.pattern_matcher.StringReader
 
+import xyz.hyperreal.pretty._
+
 
 object Main extends App {
 
@@ -30,10 +32,10 @@ object Main extends App {
 
   println( grammar )
 
-  val input = "a + (b + c)"
-  val p = new Parser( grammar, ops ++ List("(", ")") )
+  val input = "a - -(b + c)"
+  val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]") )
   val ast = p( new StringReader(input) )
 
-  println( ast )
+  println( prettyPrint(ast) )
 
 }

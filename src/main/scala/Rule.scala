@@ -208,19 +208,19 @@ class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => 
 
 object Rule {
 
-  def integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
+  val integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
 
-  def string = new TokenClassRule( classOf[StringToken], (r, s) => StringAST(r, s), "expected string" )
+  val string = new TokenClassRule( classOf[StringToken], (r, s) => StringAST(r, s), "expected string" )
 
-  def atom =
+  val atom =
     Alternates(
       List(
         new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
         new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
     ) )
 
-  def leftParen = new TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
+  val leftParen = new TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
 
-  def rightParen = new TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )
+  val rightParen = new TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )
 
 }
