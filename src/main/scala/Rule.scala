@@ -4,9 +4,9 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import xyz.hyperreal.pattern_matcher.Reader
 
 
-abstract class Rule {
+abstract class Rule[R] {
 
-  def apply( t: Stream[Token] ): Result
+  def apply( t: Stream[Token] ): Result[R]
 
   def operator( t: Stream[Token], syms: Set[String] ) = {
     t.head match {
@@ -17,7 +17,7 @@ abstract class Rule {
 
 }
 
-class LazyRule( r: => Rule ) extends Rule {
+class LazyRule[R]( r: => Rule[R] ) extends Rule[R] {
 
   lazy val r1 = r
 
@@ -25,26 +25,26 @@ class LazyRule( r: => Rule ) extends Rule {
 
 }
 
-class RuleRef extends Rule {
+class RuleRef[R] extends Rule[R] {
 
-  var ref: Rule = null
+  var ref: Rule[R] = null
 
   def apply( t: Stream[Token] ) = ref( t )
 
 }
 
-case class Alternates( rs: List[Rule] ) extends Rule {
+case class Alternates[R]( rs: List[Rule[R]] ) extends Rule[R] {
 
   require( rs nonEmpty, "there must be at least one alternate" )
 
-  def apply( t: Stream[Token] ): Result = {
-    def alternates( alts: List[Rule] ): Result =
+  def apply( t: Stream[Token] ): Result[R] = {
+    def alternates( alts: List[Rule[R]] ): Result[R] =
       alts match {
         case List( r ) => r( t )
         case hd :: tl =>
           hd( t ) match {
-            case _: Failure => alternates( tl )
-            case s: Success => s
+            case _: Failure[R] => alternates( tl )
+            case s: Success[R] => s
           }
       }
 
@@ -53,19 +53,28 @@ case class Alternates( rs: List[Rule] ) extends Rule {
 
 }
 
-case class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
+//case class Optional( rule: Rule ) extends Rule {
+//
+//  def apply( t: Stream[Token] ): Result =
+//    rule( t ) match {
+//      case s: Success => s
+//    }
+//
+//}
+
+case class Sequence[R]( rs: List[Rule[Any]], action: Vector[Any] => R ) extends Rule[R] {
 
   val len = rs.length
 
-  def apply( t: Stream[Token] ): Result = {
-    val results = new ArrayBuffer[AST]
+  def apply( t: Stream[Token] ): Result[R] = {
+    val results = new ArrayBuffer[Any]
 
-    def rules( l: List[Rule], t1: Stream[Token] ): Result =
+    def rules( l: List[Rule[Any]], t1: Stream[Token] ): Result[R] =
       l match {
         case Nil => Success( t1, action(results.toVector) )
         case hd :: tl =>
           hd( t1 ) match {
-            case f: Failure => f
+            case f: Failure[R] => f
             case Success( rest, result ) =>
               results += result
               rules( tl, rest )
@@ -77,47 +86,47 @@ case class Sequence( rs: List[Rule], action: Vector[AST] => AST ) extends Rule {
 
 }
 
-case class ZeroOrMore( repeated: Rule ) extends Rule {
+case class ZeroOrMore[R]( repeated: Rule[R] ) extends Rule[List[R]] {
 
   def apply( t: Stream[Token] ) = rep( t )
 
-  def rep( t: Stream[Token], buf: ListBuffer[AST] = new ListBuffer ): Result =
+  def rep( t: Stream[Token], buf: ListBuffer[R] = new ListBuffer ): Result[List[R]] =
     repeated( t ) match {
       case Success( rest, result ) =>
         buf += result
         rep( rest, buf )
-      case _ => Success( t, ListAST(null, buf.toList) )
+      case _ => Success( t, buf.toList )
     }
 
 }
 
-case class LeftAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+case class LeftAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], action: (R, Reader, String, R) => R ) extends Rule[R] {
 
   val same1 = if (same eq null) this else same
 
   def apply( t: Stream[Token] ) = {
 
-    def parse_expr( suc: Success ): Result = {
+    def parse_expr( suc: Success[R] ): Result[R] = {
       operator( suc.rest, ops ) match {
         case Success( rest, StringAST(pos, value) ) =>
           higher( rest ) match {
-            case _: Failure => suc
-            case Success( rest1, right ) => parse_expr( Success(rest1, BinaryAST(suc.result, pos, value, right)) )
+            case _: Failure[R] => suc
+            case Success( rest1, right ) => parse_expr( Success(rest1, action(suc.result, pos, value, right)/*BinaryAST(suc.result, pos, value, right)*/) )
           }
         case _ => suc
       }
     }
 
     higher( t ) match {
-      case f: Failure => f
-      case s: Success => parse_expr( s )
+      case f: Failure[R] => f
+      case s: Success[R] => parse_expr( s )
     }
 
   }
 
 }
 
-case class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+case class RightAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], action: (R, Reader, String, R) => R ) extends Rule[R] {
 
   val same1 = if (same eq null) this else same
 
@@ -127,7 +136,7 @@ case class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends
         operator( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
             same1( rest1 ) match {
-              case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
+              case Success( rest2, result1 ) => Success( rest2, action(result, pos, s, result1) )
               case _ => suc
             }
           case _ if same eq null => suc
@@ -173,7 +182,7 @@ case class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rul
 
 }
 
-case class NonAssocPrefix( higher: Rule, ops: Set[String] ) extends Rule {
+case class NonAssocPrefix( higher: Rule, ops: Set[String], action: (Reader, String, AST) => AST ) extends Rule {
 
   def apply( t: Stream[Token] ) =
     operator( t, ops ) match {
