@@ -11,9 +11,9 @@ object Main extends App {
   val primary =
     Alternates( List(
       Rule.integer,
-      Sequence( List(Rule.leftParen, grammarRef, Rule.rightParen), vec => vec(1) ),
-//      Sequence( List(Rule.atom, Rule.leftParen, Rule.rightParen), vec => vec(1) ),
-      Rule.atom
+      Sequence( List(Rule.symbol("("), grammarRef, Rule.symbol(")")), _(1) ),
+      Sequence( List(Rule.anyAtom, Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")), vec => StructureAST(vec(0).pos, vec(0).asInstanceOf[AtomAST].atom, vec(2).asInstanceOf[ListAST].list) ),
+      Rule.anyNonSymbolAtom
     ) )
 //  val exponential: Rule = RightAssocInfix( primary, null, Set("^") )
 //  val multiplicative: Rule = LeftAssocInfix( exponential, null, Set("*", "/") )
@@ -28,14 +28,24 @@ object Main extends App {
 
 //  println( ast )
 
+
   val (grammar, ops) = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*"), Op(200, 'xfx, "**"), Op(200, 'xfy, "^"), Op(200, 'fx, "-")) )
 
   println( grammar )
 
-  val input = "a - -(b + c)"
+  val input = "3 + (b, c)"
   val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]") )
   val ast = p( new StringReader(input) )
 
   println( prettyPrint(ast) )
+
+
+//  val integers = Rule.oneOrMoreSeparated( Rule.integer, Rule.atomMatch(",") )
+//  val p = new Parser( integers, List(",") )
+//  val input = "345 asdf"
+//
+//  val ast = p( new StringReader(input) )
+//
+//  println( ast )
 
 }

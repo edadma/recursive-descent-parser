@@ -11,6 +11,7 @@ abstract class Token {
 case class StringToken( pos: Reader, value: String ) extends Token
 case class AtomToken( pos: Reader, value: String ) extends Token
 case class QuotedAtomToken( pos: Reader, value: String ) extends Token
+case class SymbolToken( pos: Reader, value: String ) extends Token
 case class IntegerToken( pos: Reader, value: String ) extends Token
 case class ErrorToken( pos: Reader, value: String ) extends Token
 case class EOIToken( pos: Reader ) extends Token { val value = null }
@@ -32,7 +33,7 @@ class Parser( grammar: Rule, delims: List[String] ) {
       pos <~ eoi ^^ EOIToken |
       pos ~ singleStringLit ^^ { case p ~ n => QuotedAtomToken( p, n ) } |
       pos ~ ident ^^ { case p ~ n => AtomToken( p, n ) } |
-      pos ~ delimiter ^^ { case p ~ d => AtomToken( p, d ) } |
+      pos ~ delimiter ^^ { case p ~ d => SymbolToken( p, d ) } |
       pos ~ t(digits) ^^ { case p ~ n => IntegerToken( p, n ) } |
       pos ~ char ^^ { case p ~ c => ErrorToken( p, c.toString ) }
 

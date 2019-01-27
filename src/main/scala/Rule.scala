@@ -8,9 +8,9 @@ abstract class Rule {
 
   def apply( t: Stream[Token] ): Result
 
-  def atom( t: Stream[Token], syms: Set[String] ) = {
+  def operator( t: Stream[Token], syms: Set[String] ) = {
     t.head match {
-      case AtomToken( pos, value ) if syms(value) => Success( t.tail, StringAST(pos, value) )
+      case SymbolToken( pos, value ) if syms(value) => Success( t.tail, StringAST(pos, value) )
       case tok => Failure( s"expected one of: $syms", t )
     }
   }
@@ -98,7 +98,7 @@ case class LeftAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends 
   def apply( t: Stream[Token] ) = {
 
     def parse_expr( suc: Success ): Result = {
-      atom( suc.rest, ops ) match {
+      operator( suc.rest, ops ) match {
         case Success( rest, StringAST(pos, value) ) =>
           higher( rest ) match {
             case _: Failure => suc
@@ -124,7 +124,7 @@ case class RightAssocInfix( higher: Rule, same: Rule, ops: Set[String] ) extends
   def apply( t: Stream[Token] ) =
     higher( t ) match {
       case suc@Success( rest, result ) =>
-        atom( rest, ops ) match {
+        operator( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
             same1( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
@@ -144,7 +144,7 @@ case class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
     higher( t ) match {
       case f: Failure => f
       case suc@Success( rest, result ) =>
-        atom( rest, ops ) match {
+        operator( rest, ops ) match {
           case Success( rest1, StringAST(pos, s) ) =>
             higher( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
@@ -161,7 +161,7 @@ case class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rul
   val same1 = if (same eq null) this else same
 
   def apply( t: Stream[Token] ) =
-    atom( t, ops ) match {
+    operator( t, ops ) match {
       case Success( rest, StringAST(pos, s) ) =>
         same1( rest ) match {
           case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
@@ -176,7 +176,7 @@ case class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rul
 case class NonAssocPrefix( higher: Rule, ops: Set[String] ) extends Rule {
 
   def apply( t: Stream[Token] ) =
-    atom( t, ops ) match {
+    operator( t, ops ) match {
       case Success( rest, StringAST(pos, s) ) =>
         higher( rest ) match {
           case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
@@ -231,15 +231,23 @@ object Rule {
 
   val string = new TokenClassRule( classOf[StringToken], (r, s) => StringAST(r, s), "expected string" )
 
-  val atom =
+  val anyAtom =
+    Alternates(
+      List(
+        new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassRule( classOf[SymbolToken], (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
+    ) )
+
+  val anyNonSymbolAtom =
     Alternates(
       List(
         new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
         new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
-    ) )
+      ) )
 
-  val leftParen = new TokenMatchRule( classOf[AtomToken], "(", (_, _) => null, "expected '('" )
+  def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _) => null, s"expected '$s'" )
 
-  val rightParen = new TokenMatchRule( classOf[AtomToken], ")", (_, _) => null, "expected ')'" )
+  def symbol( s: String ) = new TokenMatchRule( classOf[SymbolToken], s, (_, _) => null, s"expected '$s'" )
 
 }
