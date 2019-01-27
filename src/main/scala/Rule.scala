@@ -4,14 +4,14 @@ import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import xyz.hyperreal.pattern_matcher.Reader
 
 
-abstract class Rule[R] {
+abstract class Rule[+R] {
 
   def apply( t: Stream[Token] ): Result[R]
 
-  def operator( t: Stream[Token], syms: Set[String] ) = {
+  def operator( t: Stream[Token], syms: Set[String] ): Result[(Reader, String)] = {
     t.head match {
-      case SymbolToken( pos, value ) if syms(value) => Success( t.tail, StringAST(pos, value) )
-      case tok => Failure( s"expected one of: $syms", t )
+      case SymbolToken( pos, value ) if syms(value) => Success( t.tail, (pos, value) )
+      case _ => Failure( s"expected one of: $syms", t )
     }
   }
 
@@ -27,7 +27,7 @@ class LazyRule[R]( r: => Rule[R] ) extends Rule[R] {
 
 class RuleRef[R] extends Rule[R] {
 
-  var ref: Rule[R] = null
+  var ref: Rule[R] = _
 
   def apply( t: Stream[Token] ) = ref( t )
 
@@ -108,7 +108,7 @@ case class LeftAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], 
 
     def parse_expr( suc: Success[R] ): Result[R] = {
       operator( suc.rest, ops ) match {
-        case Success( rest, StringAST(pos, value) ) =>
+        case Success( rest, (pos, value) ) =>
           higher( rest ) match {
             case _: Failure[R] => suc
             case Success( rest1, right ) => parse_expr( Success(rest1, action(suc.result, pos, value, right)/*BinaryAST(suc.result, pos, value, right)*/) )
@@ -130,33 +130,33 @@ case class RightAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String],
 
   val same1 = if (same eq null) this else same
 
-  def apply( t: Stream[Token] ) =
+  def apply( t: Stream[Token] ): Result[R] =
     higher( t ) match {
       case suc@Success( rest, result ) =>
         operator( rest, ops ) match {
-          case Success( rest1, StringAST(pos, s) ) =>
+          case Success( rest1, (pos, s) ) =>
             same1( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, action(result, pos, s, result1) )
               case _ => suc
             }
           case _ if same eq null => suc
-          case f => f
+          case f => f.asInstanceOf[Result[R]]
         }
       case f => f
     }
 
 }
 
-case class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
+case class NonAssocInfix[R]( higher: Rule[R], ops: Set[String], action: (R, Reader, String, R) => R ) extends Rule[R] {
 
   def apply( t: Stream[Token] ) =
     higher( t ) match {
-      case f: Failure => f
+      case f: Failure[R] => f
       case suc@Success( rest, result ) =>
         operator( rest, ops ) match {
-          case Success( rest1, StringAST(pos, s) ) =>
+          case Success( rest1, (pos, s) ) =>
             higher( rest1 ) match {
-              case Success( rest2, result1 ) => Success( rest2, BinaryAST(result, pos, s, result1) )
+              case Success( rest2, result1 ) => Success( rest2, action(result, pos, s, result1) )
               case _ => suc
             }
           case _ => suc
@@ -165,30 +165,30 @@ case class NonAssocInfix( higher: Rule, ops: Set[String] ) extends Rule {
 
 }
 
-case class AssocPrefix( higher: Rule, same: Rule, ops: Set[String] ) extends Rule {
+case class AssocPrefix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], action: (Reader, String, R) => R ) extends Rule[R] {
 
   val same1 = if (same eq null) this else same
 
   def apply( t: Stream[Token] ) =
     operator( t, ops ) match {
-      case Success( rest, StringAST(pos, s) ) =>
+      case Success( rest, (pos, s) ) =>
         same1( rest ) match {
-          case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
+          case Success( rest1, result ) => Success( rest1, action( pos, s, result) )
           case _ => higher( t )
         }
       case _ if same eq null => higher( t )
-      case f => f
+      case f => f.asInstanceOf[Result[R]]
     }
 
 }
 
-case class NonAssocPrefix( higher: Rule, ops: Set[String], action: (Reader, String, AST) => AST ) extends Rule {
+case class NonAssocPrefix[R]( higher: Rule[R], ops: Set[String], action: (Reader, String, R) => R ) extends Rule[R] {
 
   def apply( t: Stream[Token] ) =
     operator( t, ops ) match {
-      case Success( rest, StringAST(pos, s) ) =>
+      case Success( rest, (pos, s) ) =>
         higher( rest ) match {
-          case Success( rest1, result ) => Success( rest1, UnaryAST( pos, s, result) )
+          case Success( rest1, result ) => Success( rest1, action( pos, s, result) )
           case _ => higher( t )
         }
       case _ => higher( t )
@@ -196,7 +196,7 @@ case class NonAssocPrefix( higher: Rule, ops: Set[String], action: (Reader, Stri
 
 }
 
-case class Succeed( result: AST ) extends Rule {
+case class Succeed[R]( result: R ) extends Rule[R] {
 
   def apply( t: Stream[Token] ) = Success( t, result )
 
@@ -208,7 +208,7 @@ case class Fail( msg: String ) extends Rule {
 
 }
 
-class TokenClassRule( tok: Class[_], action: (Reader, String) => AST, error: String ) extends Rule {
+class TokenClassRule[R]( tok: Class[_], action: (Reader, String) => R, error: String ) extends Rule[R] {
 
   def apply( t: Stream[Token] ) =
     if (t.head.getClass == tok)
@@ -218,7 +218,7 @@ class TokenClassRule( tok: Class[_], action: (Reader, String) => AST, error: Str
 
 }
 
-class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => AST, error: String ) extends Rule {
+class TokenMatchRule[R]( tok: Class[_], value: String, action: (Reader, String) => R, error: String ) extends Rule[R] {
 
   def apply( t: Stream[Token] ) =
     if (t.head.getClass == tok && t.head.value == value)
@@ -230,11 +230,11 @@ class TokenMatchRule( tok: Class[_], value: String, action: (Reader, String) => 
 
 object Rule {
 
-  def oneOrMoreSeparated( repeated: Rule, separator: Rule ) =
+  def oneOrMoreSeparated[R]( repeated: Rule[R], separator: Rule[_] ): Rule[List[R]] =
     Sequence( List(
       repeated, ZeroOrMore(Sequence( List(
         separator, repeated), _(1))
-      )), v => ListAST(null, v(0) +: v(1).asInstanceOf[ListAST].list) )
+      )), v => v(0).asInstanceOf[R] +: v(1).asInstanceOf[List[R]] )
 
   val integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
 

@@ -16,7 +16,7 @@ case class IntegerToken( pos: Reader, value: String ) extends Token
 case class ErrorToken( pos: Reader, value: String ) extends Token
 case class EOIToken( pos: Reader ) extends Token { val value = null }
 
-trait Result[R]
+trait Result[+R]
 
 case class Failure[R]( msg: String, rest: Stream[Token] ) extends Result[R]
 case class Success[R]( rest: Stream[Token], result: R ) extends Result[R]

@@ -12,7 +12,7 @@ object Main extends App {
     Alternates( List(
       Rule.integer,
       Sequence( List(Rule.symbol("("), grammarRef, Rule.symbol(")")), _(1) ),
-      Sequence( List(Rule.anyAtom, Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")), vec => StructureAST(vec(0).pos, vec(0).asInstanceOf[AtomAST].atom, vec(2).asInstanceOf[ListAST].list) ),
+      Sequence( List(Rule.anyAtom, Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")), vec => StructureAST(vec(0).asInstanceOf[AtomAST].pos, vec(0).asInstanceOf[AtomAST].atom, vec(2).asInstanceOf[ListAST].list) ),
       Rule.anyNonSymbolAtom
     ) )
 //  val exponential: Rule = RightAssocInfix( primary, null, Set("^") )

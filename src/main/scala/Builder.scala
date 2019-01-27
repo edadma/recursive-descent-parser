@@ -7,14 +7,14 @@ case class Op( priority: Int, specifier: Symbol, operator: String )
 
 object Builder {
 
-  def apply( primary: Rule, grammar: RuleRef, ops: List[Op], unaryAction: (Reader, String, AST) => AST ) = {
+  def apply[R]( primary: Rule[R], grammar: RuleRef[R], ops: List[Op], unaryAction: (Reader, String, R) => R, binaryction: (R, Reader, String, R) => R ) = {
     var higher = primary
 
-    def rule( cls: Symbol, same: Rule, os: Set[String] ) =
+    def rule( cls: Symbol, same: Rule[R], os: Set[String] ) =
       cls match {
-        case 'xfx => NonAssocInfix( higher, os )
-        case 'yfx => LeftAssocInfix( higher, same, os )
-        case 'xfy => RightAssocInfix( higher, same, os )
+        case 'xfx => NonAssocInfix( higher, os, binaryction )
+        case 'yfx => LeftAssocInfix( higher, same, os, binaryction )
+        case 'xfy => RightAssocInfix( higher, same, os, binaryction )
         case 'fx => NonAssocPrefix( higher, os, unaryAction )
         case 'fy => AssocPrefix( higher, same, os, unaryAction )
       }
@@ -22,7 +22,7 @@ object Builder {
     (ops groupBy (_.priority) toList) sortBy (_._1) map {case (p, os) => (p, os groupBy (_.specifier) toList)} foreach {
       case (_, List((cls, os))) => higher = rule( cls, null, os map (_.operator) toSet )
       case (_, cs) =>
-        val same = new RuleRef
+        val same = new RuleRef[R]
         val alt = Alternates( (cs map {case (cls, os) => rule(cls, same, os map (_.operator) toSet)}) :+ higher )
 
         same.ref = alt
