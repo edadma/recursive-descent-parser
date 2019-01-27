@@ -13,6 +13,7 @@ object Main extends App {
       Rule.integer,
       Sequence( List(Rule.symbol("("), grammarRef, Rule.symbol(")")), _(1).asInstanceOf[AST] ),
       Sequence( List(Rule.anyAtom, Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")), vec => StructureAST(vec(0).asInstanceOf[AtomAST].pos, vec(0).asInstanceOf[AtomAST].atom, vec(2).asInstanceOf[List[AST]]) ),
+      Sequence( List(Rule.symbol("["), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol("]"), Optional(Sequence( List(Rule.symbol("|"), grammarRef)))), ),
       Rule.anyNonSymbolAtom
     ) )
   val (grammar, ops) = Builder[AST]( primary, grammarRef,

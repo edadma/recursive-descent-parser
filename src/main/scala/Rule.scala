@@ -53,14 +53,15 @@ case class Alternates[R]( rs: List[Rule[R]] ) extends Rule[R] {
 
 }
 
-//case class Optional( rule: Rule ) extends Rule {
-//
-//  def apply( t: Stream[Token] ): Result =
-//    rule( t ) match {
-//      case s: Success => s
-//    }
-//
-//}
+case class Optional[R]( rule: Rule[R] ) extends Rule[Option[R]] {
+
+  def apply( t: Stream[Token] ): Result[Option[R]] =
+    rule( t ) match {
+      case Success( rest, result ) => Success( rest, Some(result) )
+      case _: Failure[R] => Success( t, None )
+    }
+
+}
 
 case class Sequence[R]( rs: List[Rule[Any]], action: Vector[Any] => R ) extends Rule[R] {
 
