@@ -7,11 +7,11 @@ import xyz.hyperreal.pretty._
 
 object Main extends App {
 
-  val grammarRef = new RuleRef
+  val grammarRef = new RuleRef[AST]
   val primary =
-    Alternates( List(
+    Alternates[AST]( List(
       Rule.integer,
-      Sequence( List(Rule.symbol("("), grammarRef, Rule.symbol(")")), _(1) ),
+      Sequence( List(Rule.symbol("("), grammarRef, Rule.symbol(")")), _(1).asInstanceOf[AST] ),
       Sequence( List(Rule.anyAtom, Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")), vec => StructureAST(vec(0).asInstanceOf[AtomAST].pos, vec(0).asInstanceOf[AtomAST].atom, vec(2).asInstanceOf[ListAST].list) ),
       Rule.anyNonSymbolAtom
     ) )
@@ -29,7 +29,14 @@ object Main extends App {
 //  println( ast )
 
 
-  val (grammar, ops) = Builder( primary, grammarRef, List(Op(500, 'yfx, "+"), Op(500, 'yfx, "-"), Op(400, 'yfx, "*"), Op(200, 'xfx, "**"), Op(200, 'xfy, "^"), Op(200, 'fx, "-")) )
+  val (grammar, ops) = Builder[AST]( primary, grammarRef,
+    List(
+      Op(500, 'yfx, "+"),
+      Op(500, 'yfx, "-"),
+      Op(400, 'yfx, "*"),
+      Op(200, 'xfx, "**"),
+      Op(200, 'xfy, "^"),
+      Op(200, 'fx, "-")), UnaryAST, BinaryAST )
 
   println( grammar )
 
