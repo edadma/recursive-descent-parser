@@ -38,7 +38,7 @@ object Main extends App {
         Rule.symbol("]")),
       Sequence[(Reader, String), (Reader, String), AtomAST]( Rule.symbol("["), Rule.symbol("]"), (a, _) => AtomAST(a._1, "[]") )
     ) )
-  val (grammar, ops) = Builder[AST]( primary, grammarRef,
+  val (rules, ops) = Builder[AST]( primary,
     List(
       Op(500, 'yfx, "+"),
       Op(500, 'yfx, "-"),
@@ -47,10 +47,11 @@ object Main extends App {
       Op(200, 'xfy, "^"),
       Op(200, 'fx, "-")), (r, s, x) => StructureAST( r, s, List(x) ), (x, r, s, y) => StructureAST( r, s, List(x, y) ) )
 
-  println( grammar )
+  grammarRef.ref = rules(500)
+  println( rules )
 
-  val input = "[3|4]"
-  val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]", "|") )
+  val input = "3 + 4"
+  val p = new Parser( rules(500), ops ++ List("(", ")", ",", ".", "[", "]", "|") )
   val ast = p( new StringReader(input) )
 
   println( prettyPrint(ast) )
