@@ -43,7 +43,7 @@ case class Alternates[R]( rs: List[Rule[R]] ) extends Rule[R] {
         case List( r ) => r( t )
         case hd :: tl =>
           hd( t ) match {
-            case _: Failure[R] => alternates( tl )
+            case _: Failure => alternates( tl )
             case s: Success[R] => s
           }
       }
@@ -58,32 +58,56 @@ case class Optional[R]( rule: Rule[R] ) extends Rule[Option[R]] {
   def apply( t: Stream[Token] ): Result[Option[R]] =
     rule( t ) match {
       case Success( rest, result ) => Success( rest, Some(result) )
-      case _: Failure[R] => Success( t, None )
+      case _: Failure => Success( t, None )
     }
 
 }
 
-case class Sequence[R]( rs: List[Rule[Any]], action: Vector[Any] => R ) extends Rule[R] {
+case class Action[R, S]( rule: Rule[R], action: R => S ) extends Rule[S] {
 
-  val len = rs.length
+  def apply( t: Stream[Token] ): Result[S] =
+    rule( t ) match {
+      case Success( rest, result ) => Success( rest, action(result) )
+      case f: Failure => f
+    }
 
-  def apply( t: Stream[Token] ): Result[R] = {
-    val results = new ArrayBuffer[Any]
+}
 
-    def rules( l: List[Rule[Any]], t1: Stream[Token] ): Result[R] =
-      l match {
-        case Nil => Success( t1, action(results.toVector) )
-        case hd :: tl =>
-          hd( t1 ) match {
-            case f: Failure[R] => f
-            case Success( rest, result ) =>
-              results += result
-              rules( tl, rest )
-          }
-      }
+case class Sequence[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[(R, S)] {
 
-    rules( rs, t )
-  }
+  def apply( t: Stream[Token] ) =
+    left( t ) match {
+      case Success( rest, result ) =>
+        right( rest ) match {
+          case Success( rest1, result1 ) => Success( rest1, (result, result1) )
+          case f: Failure => f
+        }
+      case f: Failure => f
+    }
+
+}
+
+case class SequenceLeft[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[R] {
+
+  def apply( t: Stream[Token] ) =
+    left( t ) match {
+      case Success( rest, result ) =>
+        right( rest ) match {
+          case Success( rest1, _ ) => Success( rest1, result )
+          case f: Failure => f
+        }
+      case f: Failure => f
+    }
+
+}
+
+case class SequenceRight[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[S] {
+
+  def apply( t: Stream[Token] ) =
+    left( t ) match {
+      case Success( rest, _ ) => right( rest )
+      case f: Failure => f
+    }
 
 }
 
@@ -111,7 +135,7 @@ case class LeftAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], 
       operator( suc.rest, ops ) match {
         case Success( rest, (pos, value) ) =>
           higher( rest ) match {
-            case _: Failure[R] => suc
+            case _: Failure => suc
             case Success( rest1, right ) => parse_expr( Success(rest1, action(suc.result, pos, value, right)/*BinaryAST(suc.result, pos, value, right)*/) )
           }
         case _ => suc
@@ -119,7 +143,7 @@ case class LeftAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], 
     }
 
     higher( t ) match {
-      case f: Failure[R] => f
+      case f: Failure => f
       case s: Success[R] => parse_expr( s )
     }
 
@@ -152,7 +176,7 @@ case class NonAssocInfix[R]( higher: Rule[R], ops: Set[String], action: (R, Read
 
   def apply( t: Stream[Token] ) =
     higher( t ) match {
-      case f: Failure[R] => f
+      case f: Failure => f
       case suc@Success( rest, result ) =>
         operator( rest, ops ) match {
           case Success( rest1, (pos, s) ) =>
@@ -232,10 +256,7 @@ class TokenMatchRule[R]( tok: Class[_], value: String, action: (Reader, String) 
 object Rule {
 
   def oneOrMoreSeparated[R]( repeated: Rule[R], separator: Rule[_] ): Rule[List[R]] =
-    Sequence( List(
-      repeated, ZeroOrMore(Sequence( List(
-        separator, repeated), _(1))
-      )), v => v(0).asInstanceOf[R] +: v(1).asInstanceOf[List[R]] )
+    Action( Sequence(repeated, ZeroOrMore(SequenceRight(separator, repeated))), (p: (R, List[R])) => p._1 :: p._2 )
 
   def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _) => null, s"expected '$s'" )
 

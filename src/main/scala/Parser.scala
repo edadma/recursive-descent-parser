@@ -16,9 +16,8 @@ case class IntegerToken( pos: Reader, value: String ) extends Token
 case class ErrorToken( pos: Reader, value: String ) extends Token
 case class EOIToken( pos: Reader ) extends Token { val value = null }
 
-trait Result[+R]
-
-case class Failure[R]( msg: String, rest: Stream[Token] ) extends Result[R]
+abstract class Result[+R]
+case class Failure( msg: String, rest: Stream[Token] ) extends Result
 case class Success[R]( rest: Stream[Token], result: R ) extends Result[R]
 
 class Parser[R]( grammar: Rule[R], delims: List[String] ) {
