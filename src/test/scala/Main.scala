@@ -35,6 +35,7 @@ object Main extends App {
           Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")),
           Optional(SequenceRight(Rule.symbol("|"), grammarRef)), (l, t) => ListAST(null, l, t) ),
         Rule.symbol("]")),
+      Sequence[AtomAST, AtomAST, AtomAST]( Rule.symbol("["), Rule.symbol("]"), (a, _) => AtomAST(a.pos, "[]") ),
       anyNonSymbolAtom
     ) )
   val (grammar, ops) = Builder[AST]( primary, grammarRef,
@@ -48,7 +49,7 @@ object Main extends App {
 
   println( grammar )
 
-  val input = "[3, 4]"
+  val input = "[]"
   val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]") )
   val ast = p( new StringReader(input) )
 
