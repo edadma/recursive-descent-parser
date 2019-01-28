@@ -27,11 +27,10 @@ object Main extends App {
     Alternates[AST]( List(
       integer,
       SequenceLeft( SequenceRight(Rule.symbol("("), grammarRef ), Rule.symbol(")") ),
-      Action[(AtomAST, List[AST]), StructureAST](
-        Sequence(
-          SequenceLeft( anyAtom, Rule.symbol("(")),
-          SequenceLeft(Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")"))
-        ), {case (name, args) => StructureAST(name.pos, name.atom, args)} ),
+      Sequence[AtomAST, List[AST], StructureAST](
+        SequenceLeft( anyAtom, Rule.symbol("(")),
+        SequenceLeft(Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")),
+        (name, args) => StructureAST(name.pos, name.atom, args) ),
       //      Sequence( List(Rule.symbol("["), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol("]"), Optional(Sequence( List(Rule.symbol("|"), grammarRef)))), ),
       anyNonSymbolAtom
     ) )

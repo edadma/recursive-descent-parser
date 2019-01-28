@@ -73,13 +73,13 @@ case class Action[R, S]( rule: Rule[R], action: R => S ) extends Rule[S] {
 
 }
 
-case class Sequence[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[(R, S)] {
+case class Sequence[R, S, T]( left: Rule[R], right: Rule[S], action: (R, S) => T ) extends Rule[T] {
 
   def apply( t: Stream[Token] ) =
     left( t ) match {
       case Success( rest, result ) =>
         right( rest ) match {
-          case Success( rest1, result1 ) => Success( rest1, (result, result1) )
+          case Success( rest1, result1 ) => Success( rest1, action(result, result1) )
           case f: Failure => f
         }
       case f: Failure => f
@@ -256,7 +256,7 @@ class TokenMatchRule[R]( tok: Class[_], value: String, action: (Reader, String) 
 object Rule {
 
   def oneOrMoreSeparated[R]( repeated: Rule[R], separator: Rule[_] ): Rule[List[R]] =
-    Action( Sequence(repeated, ZeroOrMore(SequenceRight(separator, repeated))), (p: (R, List[R])) => p._1 :: p._2 )
+    Sequence[R, List[R], List[R]](repeated, ZeroOrMore(SequenceRight(separator, repeated)), _ :: _ )
 
   def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _) => null, s"expected '$s'" )
 
