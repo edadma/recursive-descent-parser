@@ -260,8 +260,8 @@ object Rule {
 
   def middle[R]( left: Rule[_], middle: Rule[R], right: Rule[_] ) = SequenceLeft( SequenceRight(left, middle), right )
 
-  def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _) => null, s"expected '$s'" )
+  def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _), s"expected '$s'" )
 
-  def symbol( s: String ) = new TokenMatchRule( classOf[SymbolToken], s, (_, _) => null, s"expected '$s'" )
+  def symbol( s: String ) = new TokenMatchRule( classOf[SymbolToken], s, (_, _), s"expected '$s'" )
 
 }

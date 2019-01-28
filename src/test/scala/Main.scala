@@ -1,7 +1,6 @@
 package xyz.hyperreal.recursive_descent_parser
 
-import xyz.hyperreal.pattern_matcher.StringReader
-
+import xyz.hyperreal.pattern_matcher.{Reader, StringReader}
 import xyz.hyperreal.pretty._
 
 
@@ -29,14 +28,14 @@ object Main extends App {
       Rule.middle( Rule.symbol("("), grammarRef, Rule.symbol(")") ),
       Sequence[AtomAST, List[AST], StructureAST]( anyAtom, Rule.middle(Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")),
         (name, args) => StructureAST(name.pos, name.atom, args) ),
+      anyNonSymbolAtom,
       Rule.middle(
         Rule.symbol("["),
         Sequence[List[AST], Option[AST], ListAST](
           Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")),
           Optional(SequenceRight(Rule.symbol("|"), grammarRef)), (l, t) => ListAST(null, l, t) ),
         Rule.symbol("]")),
-      Sequence[AtomAST, AtomAST, AtomAST]( Rule.symbol("["), Rule.symbol("]"), (a, _) => AtomAST(a.pos, "[]") ),
-      anyNonSymbolAtom
+      Sequence[(Reader, String), (Reader, String), AtomAST]( Rule.symbol("["), Rule.symbol("]"), (a, _) => AtomAST(a._1, "[]") )
     ) )
   val (grammar, ops) = Builder[AST]( primary, grammarRef,
     List(
