@@ -26,12 +26,15 @@ object Main extends App {
   val primary =
     Alternates[AST]( List(
       integer,
-      SequenceLeft( SequenceRight(Rule.symbol("("), grammarRef ), Rule.symbol(")") ),
-      Sequence[AtomAST, List[AST], StructureAST](
-        SequenceLeft( anyAtom, Rule.symbol("(")),
-        SequenceLeft(Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")),
+      Rule.middle( Rule.symbol("("), grammarRef, Rule.symbol(")") ),
+      Sequence[AtomAST, List[AST], StructureAST]( anyAtom, Rule.middle(Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")),
         (name, args) => StructureAST(name.pos, name.atom, args) ),
-      //      Sequence( List(Rule.symbol("["), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol("]"), Optional(Sequence( List(Rule.symbol("|"), grammarRef)))), ),
+      Rule.middle(
+        Rule.symbol("["),
+        Sequence[List[AST], Option[AST], ListAST](
+          Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")),
+          Optional(SequenceRight(Rule.symbol("|"), grammarRef)), (l, t) => ListAST(null, l, t) ),
+        Rule.symbol("]")),
       anyNonSymbolAtom
     ) )
   val (grammar, ops) = Builder[AST]( primary, grammarRef,
@@ -45,7 +48,7 @@ object Main extends App {
 
   println( grammar )
 
-  val input = "3 + -4 + 5"
+  val input = "[3, 4]"
   val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]") )
   val ast = p( new StringReader(input) )
 

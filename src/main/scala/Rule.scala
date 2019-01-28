@@ -255,8 +255,10 @@ class TokenMatchRule[R]( tok: Class[_], value: String, action: (Reader, String) 
 
 object Rule {
 
-  def oneOrMoreSeparated[R]( repeated: Rule[R], separator: Rule[_] ): Rule[List[R]] =
+  def oneOrMoreSeparated[R]( repeated: Rule[R], separator: Rule[_] ) =
     Sequence[R, List[R], List[R]](repeated, ZeroOrMore(SequenceRight(separator, repeated)), _ :: _ )
+
+  def middle[R]( left: Rule[_], middle: Rule[R], right: Rule[_] ) = SequenceLeft( SequenceRight(left, middle), right )
 
   def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _) => null, s"expected '$s'" )
 
