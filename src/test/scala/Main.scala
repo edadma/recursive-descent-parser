@@ -29,11 +29,12 @@ object Main extends App {
       Sequence[AtomAST, List[AST], StructureAST]( anyAtom, Rule.middle(Rule.symbol("("), Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")), Rule.symbol(")")),
         (name, args) => StructureAST(name.pos, name.atom, args) ),
       anyNonSymbolAtom,
-      Rule.middle(
-        Rule.symbol("["),
-        Sequence[List[AST], Option[AST], ListAST](
-          Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")),
-          Optional(SequenceRight(Rule.symbol("|"), grammarRef)), (l, t) => ListAST(null, l, t) ),
+      SequenceLeft(
+        Sequence[(Reader, String), (List[AST], Option[AST]), ListAST](
+          Rule.symbol("["),
+          Sequence[List[AST], Option[AST], (List[AST], Option[AST])](
+            Rule.oneOrMoreSeparated(grammarRef, Rule.symbol(",")),
+            Optional(SequenceRight(Rule.symbol("|"), grammarRef)), (_, _) ), {case ((pos, _), (l, t)) => ListAST(pos, l, t)} ),
         Rule.symbol("]")),
       Sequence[(Reader, String), (Reader, String), AtomAST]( Rule.symbol("["), Rule.symbol("]"), (a, _) => AtomAST(a._1, "[]") )
     ) )
@@ -48,8 +49,8 @@ object Main extends App {
 
   println( grammar )
 
-  val input = "[]"
-  val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]") )
+  val input = "[3|4]"
+  val p = new Parser( grammar, ops ++ List("(", ")", ",", ".", "[", "]", "|") )
   val ast = p( new StringReader(input) )
 
   println( prettyPrint(ast) )
