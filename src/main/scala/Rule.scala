@@ -272,6 +272,6 @@ object Rule {
 
   def atom( s: String ) = new TokenMatchRule( classOf[AtomToken], s, (_, _), s"expected '$s'" )
 
-  def symbol( s: String ) = new TokenMatchRule( classOf[SymbolToken], s, (_, _), s"expected '$s'" )
+  def symbol( s: String ) = new TokenMatchRule[(Reader, String)]( classOf[SymbolToken], s, (_, _), s"expected '$s'" )
 
 }

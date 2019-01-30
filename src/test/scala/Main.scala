@@ -14,6 +14,7 @@ object Main extends App {
   val rule900 = new RuleRef[AST]
   val integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
   val string = new TokenClassRule( classOf[StringToken], (r, s) => StringAST(r, s), "expected string" )
+  val cut = Action[(Reader, String), AtomAST]( Rule.symbol("!"), {case (pos, _) => AtomAST(pos, "!")} )
   val anyAtom =
     Alternates(
       List(
@@ -26,13 +27,11 @@ object Main extends App {
       List(
         new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
         new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
-      ) )//  val ast = p( new StringReader(input) )
-
-//  println( prettyPrint(ast) )
-//  println( ast )
+      ) )
 
   val primary =
     Alternates[AST]( List(
+      cut,
       integer,
       string,
       Rule.middle( Rule.symbol("("), rule1200, Rule.symbol(")") ),
@@ -101,7 +100,7 @@ object Main extends App {
   rule900.ref = rules(900)
   println( rules )
 
-  val input = "!"
+  val input = "var(X), !"
   val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|", "!") )
   println( "parsing..." )
   val ast = parser( new StringReader(input) )
