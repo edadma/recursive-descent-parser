@@ -64,6 +64,7 @@ object Main extends App {
       Op(1000, 'xfy, ","),
       Op(900, 'fy, "\\+"),
       Op(700, 'xfx, "="),
+      Op(700, 'xfx, "\\="),
       Op( 700, 'xfx, "==" ),
       Op( 700, 'xfx, "\\==" ),
       Op( 700, 'xfx, "@<" ),
@@ -100,15 +101,15 @@ object Main extends App {
   rule900.ref = rules(900)
   println( rules )
 
-  val input = "a :- b"
-  val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|") )
+  val input = "!"
+  val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|", "!") )
   println( "parsing..." )
   val ast = parser( new StringReader(input) )
   println( "done parsing" )
 
   println( prettyPrint(ast) )
 
-//  val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|") )
+//  val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|", "!") )
 //  val clauses = new ListBuffer[AST]
 //
 //  def clause( t: Stream[Token] ): Unit =

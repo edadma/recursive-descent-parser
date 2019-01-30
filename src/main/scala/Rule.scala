@@ -167,17 +167,18 @@ case class RightAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String],
           case Success( rest1, (pos, s) ) =>
             same1( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, action(result, pos, s, result1) )
-              case _ => suc
+              case _ if same eq null => suc
+              case f: Failure => f
             }
           case _ if same eq null => suc
-          case f => f.asInstanceOf[Result[R]]
+          case f: Failure => f
         }
       case f => f
     }
 
 }
 
-case class NonAssocInfix[R]( higher: Rule[R], ops: Set[String], action: (R, Reader, String, R) => R ) extends Rule[R] {
+case class NonAssocInfix[R]( higher: Rule[R], fallback: Boolean, ops: Set[String], action: (R, Reader, String, R) => R ) extends Rule[R] {
 
   def parse( t: Stream[Token] ) =
     higher( t ) match {
@@ -187,9 +188,11 @@ case class NonAssocInfix[R]( higher: Rule[R], ops: Set[String], action: (R, Read
           case Success( rest1, (pos, s) ) =>
             higher( rest1 ) match {
               case Success( rest2, result1 ) => Success( rest2, action(result, pos, s, result1) )
-              case _ => suc
+              case _ if fallback => suc
+              case f: Failure => f
             }
-          case _ => suc
+          case _ if fallback => suc
+          case f: Failure => f
         }
     }
 
@@ -207,21 +210,23 @@ case class AssocPrefix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], act
           case _ => higher( t )
         }
       case _ if same eq null => higher( t )
-      case f => f.asInstanceOf[Result[R]]
+      case f: Failure => f
     }
 
 }
 
-case class NonAssocPrefix[R]( higher: Rule[R], ops: Set[String], action: (Reader, String, R) => R ) extends Rule[R] {
+case class NonAssocPrefix[R]( higher: Rule[R], fallback: Boolean, ops: Set[String], action: (Reader, String, R) => R ) extends Rule[R] {
 
   def parse( t: Stream[Token] ) =
     operator( t, ops ) match {
       case Success( rest, (pos, s) ) =>
         higher( rest ) match {
           case Success( rest1, result ) => Success( rest1, action(pos, s, result) )
-          case _ => higher( t )
+          case _ if fallback => higher( t )
+          case f: Failure => f
         }
-      case _ => higher( t )
+      case _ if fallback => higher( t )
+      case f: Failure => f
     }
 
 }
