@@ -6,7 +6,12 @@ import xyz.hyperreal.pattern_matcher.Reader
 
 abstract class Rule[+R] {
 
-  def apply( t: Stream[Token] ): Result[R]
+  def parse( t: Stream[Token] ): Result[R]
+
+  def apply( t: Stream[Token] ) =  {
+//    println( s">>> $this" )
+    parse( t )
+  }
 
   def operator( t: Stream[Token], syms: Set[String] ): Result[(Reader, String)] = {
     t.head match {
@@ -21,7 +26,7 @@ class LazyRule[R]( r: => Rule[R] ) extends Rule[R] {
 
   lazy val r1 = r
 
-  def apply( t: Stream[Token] ) = r1( t )
+  def parse( t: Stream[Token] ) = r1( t )
 
 }
 
@@ -29,7 +34,7 @@ class RuleRef[R] extends Rule[R] {
 
   var ref: Rule[R] = _
 
-  def apply( t: Stream[Token] ) = ref( t )
+  def parse( t: Stream[Token] ) = ref( t )
 
 }
 
@@ -37,7 +42,7 @@ case class Alternates[R]( rs: List[Rule[R]] ) extends Rule[R] {
 
   require( rs nonEmpty, "there must be at least one alternate" )
 
-  def apply( t: Stream[Token] ): Result[R] = {
+  def parse( t: Stream[Token] ): Result[R] = {
     def alternates( alts: List[Rule[R]] ): Result[R] =
       alts match {
         case List( r ) => r( t )
@@ -55,7 +60,7 @@ case class Alternates[R]( rs: List[Rule[R]] ) extends Rule[R] {
 
 case class Optional[R]( rule: Rule[R] ) extends Rule[Option[R]] {
 
-  def apply( t: Stream[Token] ): Result[Option[R]] =
+  def parse( t: Stream[Token] ): Result[Option[R]] =
     rule( t ) match {
       case Success( rest, result ) => Success( rest, Some(result) )
       case _: Failure => Success( t, None )
@@ -65,7 +70,7 @@ case class Optional[R]( rule: Rule[R] ) extends Rule[Option[R]] {
 
 case class Action[R, S]( rule: Rule[R], action: R => S ) extends Rule[S] {
 
-  def apply( t: Stream[Token] ): Result[S] =
+  def parse( t: Stream[Token] ): Result[S] =
     rule( t ) match {
       case Success( rest, result ) => Success( rest, action(result) )
       case f: Failure => f
@@ -75,7 +80,7 @@ case class Action[R, S]( rule: Rule[R], action: R => S ) extends Rule[S] {
 
 case class Sequence[R, S, T]( left: Rule[R], right: Rule[S], action: (R, S) => T ) extends Rule[T] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     left( t ) match {
       case Success( rest, result ) =>
         right( rest ) match {
@@ -89,7 +94,7 @@ case class Sequence[R, S, T]( left: Rule[R], right: Rule[S], action: (R, S) => T
 
 case class SequenceLeft[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[R] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     left( t ) match {
       case Success( rest, result ) =>
         right( rest ) match {
@@ -103,7 +108,7 @@ case class SequenceLeft[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[R] {
 
 case class SequenceRight[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[S] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     left( t ) match {
       case Success( rest, _ ) => right( rest )
       case f: Failure => f
@@ -113,7 +118,7 @@ case class SequenceRight[R, S]( left: Rule[R], right: Rule[S] ) extends Rule[S] 
 
 case class ZeroOrMore[R]( repeated: Rule[R] ) extends Rule[List[R]] {
 
-  def apply( t: Stream[Token] ) = rep( t )
+  def parse( t: Stream[Token] ) = rep( t )
 
   def rep( t: Stream[Token], buf: ListBuffer[R] = new ListBuffer ): Result[List[R]] =
     repeated( t ) match {
@@ -129,14 +134,14 @@ case class LeftAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], 
 
   val same1 = if (same eq null) this else same
 
-  def apply( t: Stream[Token] ) = {
+  def parse( t: Stream[Token] ) = {
 
     def parse_expr( suc: Success[R] ): Result[R] = {
       operator( suc.rest, ops ) match {
         case Success( rest, (pos, value) ) =>
           higher( rest ) match {
             case _: Failure => suc
-            case Success( rest1, right ) => parse_expr( Success(rest1, action(suc.result, pos, value, right)/*BinaryAST(suc.result, pos, value, right)*/) )
+            case Success( rest1, right ) => parse_expr( Success(rest1, action(suc.result, pos, value, right)) )
           }
         case _ => suc
       }
@@ -155,7 +160,7 @@ case class RightAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String],
 
   val same1 = if (same eq null) this else same
 
-  def apply( t: Stream[Token] ): Result[R] =
+  def parse( t: Stream[Token] ): Result[R] =
     higher( t ) match {
       case suc@Success( rest, result ) =>
         operator( rest, ops ) match {
@@ -174,7 +179,7 @@ case class RightAssocInfix[R]( higher: Rule[R], same: Rule[R], ops: Set[String],
 
 case class NonAssocInfix[R]( higher: Rule[R], ops: Set[String], action: (R, Reader, String, R) => R ) extends Rule[R] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     higher( t ) match {
       case f: Failure => f
       case suc@Success( rest, result ) =>
@@ -194,7 +199,7 @@ case class AssocPrefix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], act
 
   val same1 = if (same eq null) this else same
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     operator( t, ops ) match {
       case Success( rest, (pos, s) ) =>
         same1( rest ) match {
@@ -209,11 +214,11 @@ case class AssocPrefix[R]( higher: Rule[R], same: Rule[R], ops: Set[String], act
 
 case class NonAssocPrefix[R]( higher: Rule[R], ops: Set[String], action: (Reader, String, R) => R ) extends Rule[R] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     operator( t, ops ) match {
       case Success( rest, (pos, s) ) =>
         higher( rest ) match {
-          case Success( rest1, result ) => Success( rest1, action( pos, s, result) )
+          case Success( rest1, result ) => Success( rest1, action(pos, s, result) )
           case _ => higher( t )
         }
       case _ => higher( t )
@@ -223,19 +228,19 @@ case class NonAssocPrefix[R]( higher: Rule[R], ops: Set[String], action: (Reader
 
 case class Succeed[R]( result: R ) extends Rule[R] {
 
-  def apply( t: Stream[Token] ) = Success( t, result )
+  def parse( t: Stream[Token] ) = Success( t, result )
 
 }
 
 case class Fail( msg: String ) extends Rule {
 
-  def apply( t: Stream[Token] ) = Failure( msg, t )
+  def parse( t: Stream[Token] ) = Failure( msg, t )
 
 }
 
 class TokenClassRule[R]( tok: Class[_], action: (Reader, String) => R, error: String ) extends Rule[R] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     if (t.head.getClass == tok)
       Success( t.tail, action(t.head.pos, t.head.value) )
     else
@@ -245,7 +250,7 @@ class TokenClassRule[R]( tok: Class[_], action: (Reader, String) => R, error: St
 
 class TokenMatchRule[R]( tok: Class[_], value: String, action: (Reader, String) => R, error: String ) extends Rule[R] {
 
-  def apply( t: Stream[Token] ) =
+  def parse( t: Stream[Token] ) =
     if (t.head.getClass == tok && t.head.value == value)
       Success( t.tail, action(t.head.pos, t.head.value) )
     else

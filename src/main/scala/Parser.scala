@@ -31,6 +31,7 @@ class Parser[R]( val grammar: Rule[R], delims: List[String] ) {
     def token =
       pos <~ eoi ^^ EOIToken |
       pos ~ singleStringLit ^^ { case p ~ n => QuotedAtomToken( p, n ) } |
+      pos ~ doubleStringLit ^^ { case p ~ n => StringToken( p, n ) } |
       pos ~ ident ^^ { case p ~ n => AtomToken( p, n ) } |
       pos ~ delimiter ^^ { case p ~ d => SymbolToken( p, d ) } |
       pos ~ t(digits) ^^ { case p ~ n => IntegerToken( p, n ) } |
