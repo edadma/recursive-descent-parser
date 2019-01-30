@@ -3,6 +3,8 @@ package xyz.hyperreal.recursive_descent_parser
 import xyz.hyperreal.pattern_matcher.{Reader, StringReader}
 import xyz.hyperreal.pretty._
 
+import scala.collection.mutable.ListBuffer
+
 
 object Main extends App {
 
@@ -79,18 +81,36 @@ object Main extends App {
       Op(200, 'fy, "-"),
       Op(200, 'fy, "\\")), (r, s, x) => StructureAST( r, s, List(x) ), (x, r, s, y) => StructureAST( r, s, List(x, y) ) )
 
+  val expression = rules(1200)
+
   rule1200.ref = rules(1200)
   rule900.ref = rules(900)
   println( rules )
 
   val input = "3 + a(b, c)"
-  val p = new Parser( rules(500), ops ++ List("(", ")", ",", ".", "[", "]", "|") )
-  println( "parsing" )
-  val ast = p( new StringReader(input) )
+  val p = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|") )
+//  val ast = p( new StringReader(input) )
 
 //  println( prettyPrint(ast) )
-  println( ast )
+//  println( ast )
 
+  val clauses = new ListBuffer[AST]
+
+  def clause( t: Stream[Token] ): Unit =
+    if (t.head != EOIToken) {
+      expression( t ) match {
+        case Success( rest, result ) =>
+          clauses += result
+
+          if (rest.head.value == ".")
+            clause( rest.tail )
+          else
+            sys.error( "expected '.'" )
+      }
+
+    }
+
+  clause( p.tokenStream(new StringReader(input)) )
 
   //  val integers = Rule.oneOrMoreSeparated( Rule.integer, Rule.atomMatch(",") )
   //  val p = new Parser( integers, List(",") )

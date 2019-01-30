@@ -20,7 +20,7 @@ abstract class Result[+R]
 case class Failure( msg: String, rest: Stream[Token] ) extends Result
 case class Success[R]( rest: Stream[Token], result: R ) extends Result[R]
 
-class Parser[R]( grammar: Rule[R], delims: List[String] ) {
+class Parser[R]( val grammar: Rule[R], delims: List[String] ) {
 
   object Lexer extends Matchers[Reader] {
 
