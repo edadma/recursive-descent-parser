@@ -15,7 +15,7 @@ abstract class Rule[+R] {
 
   def operator( t: Stream[Token], syms: Set[String] ): Result[(Reader, String)] = {
     t.head match {
-      case SymbolToken( pos, value ) if syms(value) => Success( t.tail, (pos, value) )
+      case tok@(_: SymbolToken | _: AtomToken) if syms(tok.value) => Success( t.tail, (tok.pos, tok.value) )
       case _ => Failure( s"expected one of: $syms", t )
     }
   }

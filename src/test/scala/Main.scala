@@ -1,7 +1,5 @@
 package xyz.hyperreal.recursive_descent_parser
 
-import java.io.FileReader
-
 import xyz.hyperreal.pattern_matcher.{Reader, StringReader}
 import xyz.hyperreal.pretty._
 
@@ -100,7 +98,7 @@ object Main extends App {
   rule900.ref = rules(900)
   println( rules )
 
-  val input = "var(X), !"
+  val input = """ X is 1 + 2 """
   val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|", "!") )
   println( "parsing..." )
   val ast = parser( new StringReader(input) )
