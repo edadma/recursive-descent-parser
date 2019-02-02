@@ -3,31 +3,29 @@ package xyz.hyperreal.recursive_descent_parser
 import xyz.hyperreal.pattern_matcher.{Reader, StringReader}
 import xyz.hyperreal.pretty._
 
-import scala.collection.mutable.ListBuffer
-
 
 object Main extends App {
 
-  val rule1200 = new RuleRef[AST]
-  val rule900 = new RuleRef[AST]
-  val integer = new TokenClassRule( _.isInstanceOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
-  val string = new TokenClassRule( _.isInstanceOf[DoubleQuotedToken], (r, s) => StringAST(r, s), "expected string" )
-  val cut = Action[(Reader, String), AtomAST]( Rule.symbol("!"), {case (pos, _) => AtomAST(pos, "!")} )
+  val rule1200 = new ParserRef[AST]
+  val rule900 = new ParserRef[AST]
+  val integer = new TokenClassParser( _.isInstanceOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
+  val string = new TokenClassParser( _.isInstanceOf[DoubleQuotedToken], (r, s) => StringAST(r, s), "expected string" )
+  val cut = Action[(Reader, String), AtomAST]( Parser.symbol("!"), {case (pos, _) => AtomAST(pos, "!")} )
   val anyAtom =
     Alternates(
       List(
-        new TokenClassRule( t => t.isInstanceOf[IdentToken] && t.value.head.isLower, (r, s) => AtomAST(r, s), "expected atom" ),
-        new TokenClassRule( _.isInstanceOf[SymbolToken], (r, s) => AtomAST(r, s), "expected atom" ),
-        new TokenClassRule( _.isInstanceOf[SingleQuotedToken], (r, s) => AtomAST(r, s), "expected atom" )
+        new TokenClassParser( t => t.isInstanceOf[IdentToken] && t.value.head.isLower, (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassParser( _.isInstanceOf[SymbolToken], (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassParser( _.isInstanceOf[SingleQuotedToken], (r, s) => AtomAST(r, s), "expected atom" )
       ) )
-  val variable = new TokenClassRule( t => t.isInstanceOf[IdentToken] && !t.value.head.isLower, {
+  val variable = new TokenClassParser( t => t.isInstanceOf[IdentToken] && !t.value.head.isLower, {
     case (r, "_") => AnonymousAST( r )
     case (r, s) => VariableAST(r, s) }, "expected variable" )
   val anyNonSymbolAtom =
     Alternates(
       List(
-        new TokenClassRule( t => t.isInstanceOf[IdentToken] && t.value.head.isLower, (r, s) => AtomAST(r, s), "expected atom" ),
-        new TokenClassRule( _.isInstanceOf[SingleQuotedToken], (r, s) => AtomAST(r, s), "expected atom" )
+        new TokenClassParser(t => t.isInstanceOf[IdentToken] && t.value.head.isLower, (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassParser( _.isInstanceOf[SingleQuotedToken], (r, s) => AtomAST(r, s), "expected atom" )
       ) )
 
   val primary =
@@ -36,23 +34,23 @@ object Main extends App {
       integer,
       string,
       variable,
-      Rule.middle( Rule.symbol("("), rule1200, Rule.symbol(")") ),
+      Parser.middle( Parser.symbol("("), rule1200, Parser.symbol(")") ),
       Sequence[AtomAST, List[AST], StructureAST](
         anyAtom,
-        Rule.middle(
-          Rule.symbol("("),
-          Rule.oneOrMoreSeparated(rule900, Rule.symbol(",")),
-          Rule.symbol(")")),
+        Parser.middle(
+          Parser.symbol("("),
+          Parser.oneOrMoreSeparated(rule900, Parser.symbol(",")),
+          Parser.symbol(")")),
         (name, args) => StructureAST(name.pos, name.atom, args) ),
       anyNonSymbolAtom,
       SequenceLeft(
         Sequence[(Reader, String), (List[AST], Option[AST]), ListAST](
-          Rule.symbol("["),
+          Parser.symbol("["),
           Sequence[List[AST], Option[AST], (List[AST], Option[AST])](
-            Rule.oneOrMoreSeparated(rule900, Rule.symbol(",")),
-            Optional(SequenceRight(Rule.symbol("|"), rule1200)), (_, _) ), {case ((pos, _), (l, t)) => ListAST(pos, l, t)} ),
-        Rule.symbol("]")),
-      Sequence[(Reader, String), (Reader, String), AtomAST]( Rule.symbol("["), Rule.symbol("]"), (a, _) => AtomAST(a._1, "[]") )
+            Parser.oneOrMoreSeparated(rule900, Parser.symbol(",")),
+            Optional(SequenceRight(Parser.symbol("|"), rule1200)), (_, _) ), {case ((pos, _), (l, t)) => ListAST(pos, l, t)} ),
+        Parser.symbol("]")),
+      Sequence[(Reader, String), (Reader, String), AtomAST]( Parser.symbol("["), Parser.symbol("]"), (a, _) => AtomAST(a._1, "[]") )
     ) )
   val (rules, ops) = Builder[AST]( primary,
     List(
@@ -103,9 +101,10 @@ object Main extends App {
   println( rules )
 
   val input = """ X is 1 + 2 """
-  val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|", "!") )
+  val lexer = new Lexer( ops ++ List("(", ")", ".", "[", "]", "|", "!") )
   println( "parsing..." )
-  val ast = parser( new StringReader(input) )
+  val tokens = lexer.tokenStream( new StringReader(input) )
+  val ast = expression( tokens )
   println( "done parsing" )
 
   println( prettyPrint(ast) )
