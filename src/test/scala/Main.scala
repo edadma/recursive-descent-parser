@@ -10,21 +10,24 @@ object Main extends App {
 
   val rule1200 = new RuleRef[AST]
   val rule900 = new RuleRef[AST]
-  val integer = new TokenClassRule( classOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
-  val string = new TokenClassRule( classOf[StringToken], (r, s) => StringAST(r, s), "expected string" )
+  val integer = new TokenClassRule( _.isInstanceOf[IntegerToken], (r, s) => IntegerAST(r, s.toInt), "expected integer" )
+  val string = new TokenClassRule( _.isInstanceOf[DoubleQuotedToken], (r, s) => StringAST(r, s), "expected string" )
   val cut = Action[(Reader, String), AtomAST]( Rule.symbol("!"), {case (pos, _) => AtomAST(pos, "!")} )
   val anyAtom =
     Alternates(
       List(
-        new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
-        new TokenClassRule( classOf[SymbolToken], (r, s) => AtomAST(r, s), "expected atom" ),
-        new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
+        new TokenClassRule( t => t.isInstanceOf[IdentToken] && t.value.head.isLower, (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassRule( _.isInstanceOf[SymbolToken], (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassRule( _.isInstanceOf[SingleQuotedToken], (r, s) => AtomAST(r, s), "expected atom" )
       ) )
+  val variable = new TokenClassRule( t => t.isInstanceOf[IdentToken] && !t.value.head.isLower, {
+    case (r, "_") => AnonymousAST( r )
+    case (r, s) => VariableAST(r, s) }, "expected variable" )
   val anyNonSymbolAtom =
     Alternates(
       List(
-        new TokenClassRule( classOf[AtomToken], (r, s) => AtomAST(r, s), "expected atom" ),
-        new TokenClassRule( classOf[QuotedAtomToken], (r, s) => AtomAST(r, s), "expected atom" )
+        new TokenClassRule( t => t.isInstanceOf[IdentToken] && t.value.head.isLower, (r, s) => AtomAST(r, s), "expected atom" ),
+        new TokenClassRule( _.isInstanceOf[SingleQuotedToken], (r, s) => AtomAST(r, s), "expected atom" )
       ) )
 
   val primary =
@@ -32,6 +35,7 @@ object Main extends App {
       cut,
       integer,
       string,
+      variable,
       Rule.middle( Rule.symbol("("), rule1200, Rule.symbol(")") ),
       Sequence[AtomAST, List[AST], StructureAST](
         anyAtom,

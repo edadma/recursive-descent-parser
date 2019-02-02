@@ -8,9 +8,9 @@ abstract class Token {
   val value: String
 }
 
-case class StringToken( pos: Reader, value: String ) extends Token
-case class AtomToken( pos: Reader, value: String ) extends Token
-case class QuotedAtomToken( pos: Reader, value: String ) extends Token
+case class DoubleQuotedToken( pos: Reader, value: String ) extends Token
+case class IdentToken( pos: Reader, value: String ) extends Token
+case class SingleQuotedToken( pos: Reader, value: String ) extends Token
 case class SymbolToken( pos: Reader, value: String ) extends Token
 case class IntegerToken( pos: Reader, value: String ) extends Token
 case class ErrorToken( pos: Reader, value: String ) extends Token
@@ -18,7 +18,7 @@ case class EOIToken( pos: Reader ) extends Token { val value = null }
 
 abstract class Result[+R]
 case class Failure( msg: String, rest: Stream[Token] ) extends Result
-case class Success[R]( rest: Stream[Token], result: R ) extends Result[R]
+case class Success[R]( result: R, rest: Stream[Token] ) extends Result[R]
 
 class Parser[R]( val grammar: Rule[R], delims: List[String] ) {
 
@@ -30,9 +30,9 @@ class Parser[R]( val grammar: Rule[R], delims: List[String] ) {
 
     def token =
       pos <~ eoi ^^ EOIToken |
-      pos ~ singleStringLit ^^ { case p ~ n => QuotedAtomToken( p, n ) } |
-      pos ~ doubleStringLit ^^ { case p ~ n => StringToken( p, n ) } |
-      pos ~ ident ^^ { case p ~ n => AtomToken( p, n ) } |
+      pos ~ singleStringLit ^^ { case p ~ n => SingleQuotedToken( p, n ) } |
+      pos ~ doubleStringLit ^^ { case p ~ n => DoubleQuotedToken( p, n ) } |
+      pos ~ ident ^^ { case p ~ n => IdentToken( p, n ) } |
       pos ~ delimiter ^^ { case p ~ d => SymbolToken( p, d ) } |
       pos ~ t(digits) ^^ { case p ~ n => IntegerToken( p, n ) } |
       pos ~ char ^^ { case p ~ c => ErrorToken( p, c.toString ) }
