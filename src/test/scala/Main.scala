@@ -3,6 +3,8 @@ package xyz.hyperreal.recursive_descent_parser
 import xyz.hyperreal.pattern_matcher.{Reader, StringReader}
 import xyz.hyperreal.pretty._
 
+import scala.collection.mutable.ListBuffer
+
 
 object Main extends App {
 
@@ -100,34 +102,34 @@ object Main extends App {
   rule900.ref = rules(900)
   println( rules )
 
-  val input = """ X is 1 + 2 """
+//  val input = """ (X = 3; X = 4), writeln( X ) """
+//  val lexer = new Lexer( ops ++ List("(", ")", ".", "[", "]", "|", "!") )
+//  println( "parsing..." )
+//  val tokens = lexer.tokenStream( new StringReader(input) )
+//  val ast = expression( tokens )
+//  println( "done parsing" )
+//
+//  println( prettyPrint(ast) )
+
   val lexer = new Lexer( ops ++ List("(", ")", ".", "[", "]", "|", "!") )
-  println( "parsing..." )
-  val tokens = lexer.tokenStream( new StringReader(input) )
-  val ast = expression( tokens )
-  println( "done parsing" )
+  val clauses = new ListBuffer[AST]
 
-  println( prettyPrint(ast) )
+  def clause( t: Stream[Token] ): Unit =
+    if (!t.head.isInstanceOf[EOIToken]) {
+      expression( t ) match {
+        case Success( result, rest ) =>
+          clauses += result
 
-//  val parser = new Parser( rules(1200), ops ++ List("(", ")", ".", "[", "]", "|", "!") )
-//  val clauses = new ListBuffer[AST]
-//
-//  def clause( t: Stream[Token] ): Unit =
-//    if (!t.head.isInstanceOf[EOIToken]) {
-//      expression( t ) match {
-//        case Success( rest, result ) =>
-//          clauses += result
-//
-//          if (rest.head.value == ".")
-//            clause( rest.tail )
-//          else
-//            sys.error( s"expected '.': ${rest.head}" )
-//      }
-//
-//    }
-//
-//  clause( parser.tokenStream(Reader.fromFile("/home/ed/dev/prolog/examples/sudoku.prolog")) )
-//  println( clauses.length )
+          if (rest.head.value == ".")
+            clause( rest.tail )
+          else
+            sys.error( s"expected '.': ${rest.head}" )
+      }
+
+    }
+
+  clause( lexer.tokenStream(Reader.fromFile("/home/ed/dev/prolog/examples/sudoku.prolog")) )
+  println( clauses.length )
 
   //  val integers = Rule.oneOrMoreSeparated( Rule.integer, Rule.atomMatch(",") )
   //  val p = new Parser( integers, List(",") )
