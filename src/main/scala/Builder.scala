@@ -5,12 +5,14 @@ import xyz.hyperreal.pattern_matcher.Reader
 import scala.collection.mutable
 
 
-abstract class Assoc
-case object XFX extends Assoc
-case object YFX extends Assoc
-case object XFY extends Assoc
-case object FX extends Assoc
-case object FY extends Assoc
+abstract class Assoc( val name: String )
+case object XFX extends Assoc( "xfx" )
+case object YFX extends Assoc( "yfx" )
+case object XFY extends Assoc( "xfy" )
+case object FX extends Assoc( "fx" )
+case object FY extends Assoc( "fy" )
+case object XF extends Assoc( "xf" )
+case object YF extends Assoc( "yf" )
 
 case class Op( priority: Int, specifier: Assoc, operator: String )
 
