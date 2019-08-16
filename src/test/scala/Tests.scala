@@ -1,10 +1,9 @@
 package xyz.hyperreal.name
 
 import org.scalatest._
-import prop.PropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
-
-class Tests extends FreeSpec with PropertyChecks with Matchers {
+class Tests extends FreeSpec with ScalaCheckPropertyChecks with Matchers {
 	
 	"tests" in {
 //		a [RuntimeException] should be thrownBy {interpret( """ (= 1 1] """ )}

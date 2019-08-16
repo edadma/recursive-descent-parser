@@ -31,7 +31,7 @@ class Lexer( delims: List[String] ) extends Matchers[Reader] {
     pos ~ t(digits) ^^ { case p ~ n => IntegerToken( p, n ) } |
     pos ~ char ^^ { case p ~ c => ErrorToken( p, c.toString ) }
 
-  def tokenStream( r: Reader ): Stream[Token] = {
+  def tokenStream( r: Reader ): LazyList[Token] = {
     token( r ) match {
       case m: Mismatch => m.error
       case Match( result, next ) => result #:: tokenStream( next )
